@@ -1,0 +1,60 @@
+falco-talon:
+  replicaCount: 2
+
+  # Talon listens here; Falcosidekick's webhook output (platform/40-falco) posts
+  # events to http://falco-talon:2803.
+  service:
+    port: 2803
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+  # Main Talon config (talon.yaml). RBAC for the kubernetes actionners (label +
+  # networkpolicy) is created by the chart when rbac.create stays true.
+  config:
+    deployment:
+      port: 2803
+    notifiers:
+      - k8sevents
+    actionners:
+      - kubernetes
+    defaultNotifiers:
+      - k8sevents
+
+  # Response rules (rules.yaml). Two threat classes from Falco map to a
+  # label + network-isolation response.
+  rules: |-
+    - action: Labelize the offending pod
+      actionner: kubernetes:label
+      parameters:
+        labels:
+          terminal-lab/analysis: suspicious
+          terminal-lab/quarantine: "true"
+
+    - action: Network-isolate the offending pod
+      actionner: kubernetes:networkpolicy
+      # No allow list → the generated NetworkPolicy denies all ingress/egress
+      # for the pod, cutting off C2 / mining-pool traffic and lateral movement.
+
+    - rule: Quarantine crypto-mining pod
+      match:
+        tags:
+          - crypto_mining
+        priority: critical
+      actions:
+        - Labelize the offending pod
+        - Network-isolate the offending pod
+
+    - rule: Quarantine persistence attempt
+      match:
+        tags:
+          - persistence
+        priority: critical
+      actions:
+        - Labelize the offending pod
+        - Network-isolate the offending pod

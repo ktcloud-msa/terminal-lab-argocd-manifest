@@ -1,0 +1,45 @@
+---
+# Caps total workload resource consumption in the application namespace so a
+# runaway pod can't starve the cluster.
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: terminal-lab-quota
+  namespace: terminal-lab
+spec:
+  hard:
+    requests.cpu: "8"
+    requests.memory: 16Gi
+    limits.cpu: "16"
+    limits.memory: 32Gi
+    pods: "60"
+---
+# Isolates monitoring resource consumption from application workloads.
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: monitoring-quota
+  namespace: monitoring
+spec:
+  hard:
+    requests.cpu: "4"
+    requests.memory: 10Gi
+    limits.cpu: "8"
+    limits.memory: 16Gi
+---
+# Per-container defaults so workloads without explicit resource specs are still
+# bounded and never hit the quota ceiling unexpectedly.
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: terminal-lab-limits
+  namespace: terminal-lab
+spec:
+  limits:
+    - type: Container
+      default:
+        cpu: "1"
+        memory: 1Gi
+      defaultRequest:
+        cpu: 100m
+        memory: 256Mi

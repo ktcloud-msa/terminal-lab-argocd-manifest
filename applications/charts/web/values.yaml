@@ -1,0 +1,26 @@
+image:
+  repository: kanei0415/terminal-lab-web
+  tag: latest
+  pullPolicy: IfNotPresent
+
+replicaCount: 2
+
+containerPort: 8080
+
+service:
+  type: ClusterIP
+  port: 80
+
+# Public hostname + TLS. cert-manager issues the cert (HTTP-01) into tlsSecret.
+host: web.external.terminal-lab.kr
+tlsSecretName: web-external-tls
+clusterIssuer: letsencrypt-prod
+
+# Dedicated ServiceAccount (1 workload — 1 SA). Token is not mounted; the web
+# frontend never calls the Kubernetes API.
+serviceAccountName: web
+
+# Injected into the SPA at runtime via a ConfigMap mounted at
+# /usr/share/nginx/html/config.js. Keys land on window.__APP_CONFIG__.
+runtimeConfig:
+  API_BASE_URL: https://api.external.terminal-lab.kr

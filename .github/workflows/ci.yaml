@@ -1,0 +1,43 @@
+name: argocd-manifest-ci
+
+# Validates the ArgoCD bootstrap + platform + application tree: every raw-manifest
+# chart must render, and the whole repo is scanned with Trivy config for IaC
+# misconfig (privileged, hostPath, missing securityContext) before it can reach a
+# cluster.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  render-and-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.16.2
+
+      - name: helm template all raw-manifest charts
+        run: |
+          set -e
+          for chart in $(find platform applications -name Chart.yaml -not -path '*/charts/*/charts/*'); do
+            dir="$(dirname "$chart")"
+            # Raw charts have no upstream dependencies — render them. Wrapper
+            # charts (with `dependencies:`) fetch their deps at deploy time and
+            # are skipped here.
+            if ! grep -q '^dependencies:' "$chart"; then
+              echo "== rendering $dir =="
+              helm template ci "$dir" >/dev/null
+            fi
+          done
+
+      - name: Trivy config scan (IaC gate)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: config
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          format: table

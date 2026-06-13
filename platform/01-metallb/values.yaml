@@ -1,0 +1,31 @@
+metallb:
+  # L2 (ARP) mode is the simplest fit for an OpenStack tenant network where we
+  # cannot speak BGP to the underlay. The speaker announces the service VIP via
+  # gratuitous ARP from whichever node currently owns it.
+  speaker:
+    # OpenStack neutron port-security drops spoofed L2 frames; if announcements
+    # don't land, disable port-security / enable allowed-address-pairs on the
+    # node ports, or switch to FRR/BGP mode here.
+    frr:
+      enabled: false
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 128Mi
+
+  controller:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 128Mi
+
+  # CRDs (IPAddressPool / L2Advertisement) ship with the chart; the actual pool
+  # objects are applied separately in platform/02-metallb-config (sync-wave 1).
+  crds:
+    enabled: true

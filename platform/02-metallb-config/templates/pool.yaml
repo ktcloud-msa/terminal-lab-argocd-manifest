@@ -1,0 +1,26 @@
+---
+# Wave 1 — applied after the MetalLB CRDs are registered by the controller.
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: {{ .Values.addressPool.name }}
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  addresses:
+{{- range .Values.addressPool.addresses }}
+    - {{ . }}
+{{- end }}
+  autoAssign: true
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: {{ .Values.addressPool.name }}-l2
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  ipAddressPools:
+    - {{ .Values.addressPool.name }}

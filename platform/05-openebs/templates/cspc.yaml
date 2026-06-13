@@ -1,0 +1,24 @@
+{{- if .Values.cstorPoolCluster.enabled }}
+# CStorPoolCluster — one stripe pool per node from its attached block devices.
+# Fill in .Values.cstorPoolCluster.pools with real `kubectl get bd -n openebs`
+# device names before enabling. Until then this stays out of the render so the
+# iSCSI StorageClasses exist but provision lazily once pools are ready.
+apiVersion: cstor.openebs.io/v1
+kind: CStorPoolCluster
+metadata:
+  name: {{ .Values.cstorPoolCluster.name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  pools:
+{{- range .Values.cstorPoolCluster.pools }}
+    - nodeSelector:
+        kubernetes.io/hostname: {{ .node }}
+      dataRaidGroups:
+        - blockDevices:
+{{- range .blockDevices }}
+            - blockDeviceName: {{ . }}
+{{- end }}
+      poolConfig:
+        dataRaidGroupType: stripe
+{{- end }}
+{{- end }}

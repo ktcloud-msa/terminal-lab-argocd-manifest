@@ -1,0 +1,11 @@
+apiVersion: v2
+name: cert-manager
+description: cert-manager — ACME (Let's Encrypt) certificates via HTTP-01
+type: application
+version: 1.0.0
+appVersion: "1.16.2"
+
+dependencies:
+  - name: cert-manager
+    version: "v1.16.x"
+    repository: https://charts.jetstack.io

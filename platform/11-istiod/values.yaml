@@ -1,0 +1,44 @@
+istiod:
+  global:
+    istioNamespace: istio-system
+    proxy:
+      resources:
+        requests:
+          cpu: 50m
+          memory: 64Mi
+        limits:
+          cpu: 500m
+          memory: 256Mi
+    proxy_init:
+      resources:
+        requests:
+          cpu: 10m
+          memory: 40Mi
+        limits:
+          cpu: 100m
+          memory: 128Mi
+
+  pilot:
+    autoscaleEnabled: true
+    autoscaleMin: 1
+    autoscaleMax: 3
+    replicaCount: 1
+    resources:
+      requests:
+        cpu: 200m
+        memory: 256Mi
+      limits:
+        cpu: 1000m
+        memory: 1024Mi
+
+  meshConfig:
+    # Envoy access logs to stdout — picked up by the node log pipeline.
+    accessLogFile: /dev/stdout
+    accessLogEncoding: JSON
+    enableTracing: false
+    defaultConfig:
+      proxyMetadata: {}
+    # On-prem: keep egress explicit-but-open here; tighten to REGISTRY_ONLY once
+    # ServiceEntries for external dependencies are catalogued.
+    outboundTrafficPolicy:
+      mode: ALLOW_ANY

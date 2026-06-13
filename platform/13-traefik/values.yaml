@@ -1,0 +1,115 @@
+traefik:
+  deployment:
+    kind: Deployment
+    replicas: 2
+    healthchecksPort: 8000
+
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: traefik
+            # On-prem nodes rarely advertise a zone label; spread by hostname.
+            topologyKey: kubernetes.io/hostname
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+  ports:
+    web:
+      port: 8000
+      expose:
+        default: true
+      exposedPort: 80
+      protocol: TCP
+    websecure:
+      port: 8443
+      expose:
+        default: true
+      exposedPort: 443
+      protocol: TCP
+      tls:
+        enabled: true
+    traefik:
+      port: 9000
+      expose:
+        default: false
+      protocol: TCP
+
+  service:
+    type: LoadBalancer
+    # MetalLB hands this Service an address from platform/02-metallb-config's
+    # external-pool. No cloud-LB annotations — this is bare metal on OpenStack.
+    annotations:
+      metallb.universe.tf/address-pool: external-pool
+
+  ping:
+    enabled: true
+
+  additionalArguments:
+    - "--ping.entryPoint=web"
+    - "--ping.terminatingStatusCode=503"
+
+  ingressRoute:
+    dashboard:
+      enabled: true
+      entryPoints: ["traefik"]
+      matchRule: PathPrefix(`/dashboard`) || PathPrefix(`/api`)
+
+  providers:
+    kubernetesCRD:
+      enabled: true
+      allowCrossNamespace: true
+    # Enabled so cert-manager's HTTP-01 solver Ingress (class "traefik") is
+    # served on the web entrypoint for ACME challenge validation.
+    kubernetesIngress:
+      enabled: true
+
+  # Publish an IngressClass named "traefik" — referenced by the ACME HTTP-01
+  # solver and by the ClusterIssuer in platform/41-cluster-issuer.
+  ingressClass:
+    enabled: true
+    isDefaultClass: true
+    name: traefik
+
+  logs:
+    general:
+      level: INFO
+    access:
+      enabled: true
+      format: json
+
+  metrics:
+    prometheus:
+      service:
+        enabled: true
+      serviceMonitor:
+        enabled: true
+        namespace: monitoring
+        namespaceSelector:
+          any: true
+
+  rbac:
+    enabled: true
+
+# Path-based routes for the internal dashboards (ArgoCD, Grafana). The public
+# web/api hosts and their TLS live in the application charts (terminal-lab ns),
+# alongside their cert-manager Certificates.
+routing:
+  argocd:
+    serviceName: argocd-server
+    namespace: argocd
+    port: 80
+
+  grafana:
+    serviceName: grafana
+    namespace: monitoring
+    port: 80

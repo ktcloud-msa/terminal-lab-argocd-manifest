@@ -1,0 +1,52 @@
+---
+# Wave 3 — ConstraintTemplates must be registered before Constraints are created.
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sRequiredNonRoot
+metadata:
+  name: require-non-root-terminal-lab
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  enforcementAction: deny
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    namespaces:
+      - terminal-lab
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/part-of: terminal-lab
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sReadOnlyRootFilesystem
+metadata:
+  name: require-readonly-rootfs-terminal-lab
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  enforcementAction: deny
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    namespaces:
+      - terminal-lab
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/part-of: terminal-lab
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sDedicatedServiceAccount
+metadata:
+  name: require-dedicated-sa-terminal-lab
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  enforcementAction: deny
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    namespaces:
+      - terminal-lab

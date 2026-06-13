@@ -1,0 +1,5 @@
+apiVersion: v2
+name: metallb-config
+description: MetalLB IPAddressPool + L2Advertisement for the on-prem VIP range
+type: application
+version: 1.0.0

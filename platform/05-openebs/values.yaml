@@ -1,0 +1,48 @@
+openebs:
+  # Keep the footprint to LocalPV-hostpath only — replicated engines are off;
+  # iSCSI block comes from the separate cStor subchart below.
+  engines:
+    local:
+      lvm:
+        enabled: false
+      zfs:
+        enabled: false
+    replicated:
+      mayastor:
+        enabled: false
+  localpv-provisioner:
+    localpv:
+      enabled: true
+      basePath: /var/openebs/local
+  # The umbrella also bundles loki/minio for log storage in some versions; off.
+  loki:
+    enabled: false
+  minio:
+    enabled: false
+
+# cStor iSCSI engine. Provisioning real pools needs a CStorPoolCluster bound to
+# node block devices — see templates/cspc.yaml (disabled until you fill in the
+# device list for your OpenStack workers' attached volumes).
+cstor:
+  enabled: true
+  csiController:
+    resync: ""
+  cspcOperator:
+    resync: ""
+
+# Dynamic NFS provisioner — provides openebs.io/nfsrwx for the iSCSI-RWX class.
+nfsProvisioner:
+  enabled: true
+
+# Example CStorPoolCluster, applied only when set true AND blockDevices are
+# filled in with `kubectl get bd -n openebs` names for your worker volumes.
+cstorPoolCluster:
+  enabled: false
+  name: cspc-iscsi
+  pools: []
+    # - node: worker-1
+    #   blockDevices: ["blockdevice-xxxxxxxx"]
+    # - node: worker-2
+    #   blockDevices: ["blockdevice-yyyyyyyy"]
+    # - node: worker-3
+    #   blockDevices: ["blockdevice-zzzzzzzz"]

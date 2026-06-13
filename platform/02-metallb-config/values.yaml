@@ -1,0 +1,8 @@
+# The external VIP range MetalLB hands out to type=LoadBalancer Services
+# (chiefly Traefik). These must be free addresses on the OpenStack provider /
+# tenant network the worker nodes sit on, and excluded from the Neutron DHCP
+# allocation pool so nothing else claims them.
+addressPool:
+  name: external-pool
+  addresses:
+    - 10.0.10.240-10.0.10.250

@@ -1,0 +1,128 @@
+kube-prometheus-stack:
+  fullnameOverride: kps
+
+  crds:
+    enabled: true
+
+  alertmanager:
+    enabled: true
+    config:
+      global:
+        resolve_timeout: 5m
+      route:
+        group_by: ["alertname", "namespace"]
+        group_wait: 30s
+        group_interval: 5m
+        repeat_interval: 4h
+        receiver: "ops-email"
+        routes:
+          - matchers:
+              - 'severity = "critical"'
+            receiver: "ops-email"
+            continue: false
+      receivers:
+        - name: "ops-email"
+          email_configs:
+            - to: "kimyoungho0415@gmail.com"
+              send_resolved: true
+    alertmanagerSpec:
+      storage:
+        volumeClaimTemplate:
+          spec:
+            storageClassName: openebs-hostpath
+            accessModes: ["ReadWriteOnce"]
+            resources:
+              requests:
+                storage: 2Gi
+
+  prometheus:
+    enabled: true
+    prometheusSpec:
+      retention: 7d
+      retentionSize: "9GiB"
+
+      serviceMonitorSelectorNilUsesHelmValues: false
+      podMonitorSelectorNilUsesHelmValues: false
+      ruleSelectorNilUsesHelmValues: false
+      probeSelectorNilUsesHelmValues: false
+      scrapeConfigSelectorNilUsesHelmValues: false
+
+      resources:
+        requests:
+          cpu: 200m
+          memory: 512Mi
+        limits:
+          cpu: 1000m
+          memory: 2Gi
+
+      storageSpec:
+        volumeClaimTemplate:
+          spec:
+            # On-prem: node-local OpenEBS hostpath (RWO) for the TSDB.
+            storageClassName: openebs-hostpath
+            accessModes: ["ReadWriteOnce"]
+            resources:
+              requests:
+                storage: 10Gi
+
+    service:
+      type: ClusterIP
+
+  grafana:
+    enabled: true
+    fullnameOverride: grafana
+
+    adminPassword: "terminal-lab-grafana-admin"
+
+    service:
+      type: ClusterIP
+      port: 80
+
+    persistence:
+      enabled: true
+      storageClassName: openebs-hostpath
+      size: 5Gi
+      accessModes: ["ReadWriteOnce"]
+
+    grafana.ini:
+      server:
+        root_url: "%(protocol)s://%(domain)s/grafana"
+        serve_from_sub_path: true
+      analytics:
+        check_for_updates: false
+      log:
+        mode: console
+
+    sidecar:
+      dashboards:
+        enabled: true
+        searchNamespace: ALL
+      datasources:
+        enabled: true
+        defaultDatasourceEnabled: true
+
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+  kube-state-metrics:
+    resources:
+      requests:
+        cpu: 20m
+        memory: 64Mi
+      limits:
+        cpu: 100m
+        memory: 256Mi
+
+  prometheus-node-exporter:
+    resources:
+      requests:
+        cpu: 20m
+        memory: 32Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi

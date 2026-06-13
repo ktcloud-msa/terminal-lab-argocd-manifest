@@ -1,0 +1,88 @@
+---
+# Wave 3 — applied after Gatekeeper CRDs are registered by the operator wave.
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8srequirednonroot
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sRequiredNonRoot
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8srequirednonroot
+
+        violation[{"msg": msg}] {
+          input.review.object.kind == "Pod"
+          not pod_non_root
+          msg := sprintf("Pod %v must set securityContext.runAsNonRoot: true at pod or all container level", [input.review.object.metadata.name])
+        }
+
+        pod_non_root {
+          input.review.object.spec.securityContext.runAsNonRoot == true
+        }
+
+        pod_non_root {
+          count(input.review.object.spec.containers) > 0
+          every container in input.review.object.spec.containers {
+            container.securityContext.runAsNonRoot == true
+          }
+        }
+---
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8sreadonlyrootfilesystem
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sReadOnlyRootFilesystem
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8sreadonlyrootfilesystem
+
+        violation[{"msg": msg}] {
+          input.review.object.kind == "Pod"
+          container := input.review.object.spec.containers[_]
+          not container.securityContext.readOnlyRootFilesystem == true
+          msg := sprintf("Container %v in Pod %v must set securityContext.readOnlyRootFilesystem: true", [container.name, input.review.object.metadata.name])
+        }
+---
+# 1 workload — 1 ServiceAccount: forbid pods that fall back to the namespace
+# "default" SA (or set none). Each workload must name its own dedicated SA.
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8sdedicatedserviceaccount
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sDedicatedServiceAccount
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8sdedicatedserviceaccount
+
+        violation[{"msg": msg}] {
+          input.review.object.kind == "Pod"
+          sa := object.get(input.review.object.spec, "serviceAccountName", "default")
+          sa == "default"
+          msg := sprintf("Pod %v must run under its own dedicated ServiceAccount, not 'default' (1 workload — 1 SA)", [input.review.object.metadata.name])
+        }
+
+        violation[{"msg": msg}] {
+          input.review.object.kind == "Pod"
+          not input.review.object.spec.serviceAccountName
+          msg := sprintf("Pod %v must set spec.serviceAccountName to a dedicated ServiceAccount", [input.review.object.metadata.name])
+        }

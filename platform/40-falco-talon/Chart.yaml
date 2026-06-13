@@ -1,0 +1,14 @@
+apiVersion: v2
+name: falco-talon
+description: >
+  Falco Talon — no-code response engine. Consumes Falco events (via Falcosidekick)
+  and runs Kubernetes responses: labels the offending pod and applies a NetworkPolicy
+  to isolate it.
+type: application
+version: 1.0.0
+appVersion: "0.3.0"
+
+dependencies:
+  - name: falco-talon
+    version: "0.3.x"
+    repository: https://falcosecurity.github.io/charts

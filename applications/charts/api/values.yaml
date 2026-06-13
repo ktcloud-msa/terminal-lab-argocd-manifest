@@ -1,0 +1,23 @@
+image:
+  repository: kanei0415/terminal-lab-api
+  tag: latest
+  pullPolicy: IfNotPresent
+
+replicaCount: 2
+
+containerPort: 8080
+
+service:
+  type: ClusterIP
+  port: 80
+
+# Public hostname + TLS. cert-manager issues the cert (HTTP-01) into tlsSecret.
+host: api.external.terminal-lab.kr
+tlsSecretName: api-external-tls
+clusterIssuer: letsencrypt-prod
+
+# Dedicated ServiceAccount (1 workload — 1 SA).
+serviceAccountName: api
+
+# Liveness/readiness endpoint exposed by the API.
+healthPath: /healthz

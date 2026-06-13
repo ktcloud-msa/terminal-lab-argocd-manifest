@@ -1,0 +1,9 @@
+acme:
+  # Let's Encrypt production. Swap to the staging endpoint while testing to
+  # avoid the prod rate limits:
+  #   https://acme-staging-v02.api.letsencrypt.org/directory
+  server: https://acme-v02.api.letsencrypt.org/directory
+  email: kimyoungho0415@gmail.com
+  # cert-manager publishes the HTTP-01 challenge through an Ingress on this
+  # class; Traefik (ingressClass "traefik") serves it on the web (:80) entrypoint.
+  ingressClass: traefik

@@ -1,0 +1,54 @@
+---
+# RWO — LocalPV hostpath. Default class: single-node, node-local disk. Good for
+# Prometheus/Grafana TSDB and any workload that doesn't need shared access.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: openebs-hostpath
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+    openebs.io/cas-type: local
+    cas.openebs.io/config: |
+      - name: StorageType
+        value: "hostpath"
+      - name: BasePath
+        value: "/var/openebs/local"
+provisioner: openebs.io/local
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Delete
+# LocalPV hostpath cannot be expanded online.
+allowVolumeExpansion: false
+---
+# RWO — cStor iSCSI block. Replicated across cStor pool nodes; exposed to the
+# kubelet over iSCSI. Also the backing class for the RWX layer below.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: openebs-cstor-iscsi
+provisioner: cstor.csi.openebs.io
+allowVolumeExpansion: true
+volumeBindingMode: Immediate
+reclaimPolicy: Delete
+parameters:
+  cas-type: cstor
+  # Must match the CStorPoolCluster name in templates/cspc.yaml.
+  cstorPoolCluster: cspc-iscsi
+  replicaCount: "3"
+---
+# RWX — iSCSI-backed shared volume. The dynamic NFS provisioner carves a PVC
+# from openebs-cstor-iscsi (iSCSI) and re-exports it as NFS so many pods can
+# mount it ReadWriteMany.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: openebs-iscsi-rwx
+  annotations:
+    openebs.io/cas-type: nsfpv
+    cas.openebs.io/config: |
+      - name: NFSServerType
+        value: "kernel"
+      - name: BackendStorageClass
+        value: "openebs-cstor-iscsi"
+provisioner: openebs.io/nfsrwx
+reclaimPolicy: Delete
+volumeBindingMode: Immediate

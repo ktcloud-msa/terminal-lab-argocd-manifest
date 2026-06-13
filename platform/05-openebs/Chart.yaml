@@ -1,0 +1,31 @@
+apiVersion: v2
+name: openebs
+description: >
+  OpenEBS storage for the on-prem cluster. LocalPV-hostpath backs RWO volumes;
+  cStor exposes replicated block over iSCSI, and the dynamic NFS provisioner
+  layers RWX on top of those iSCSI volumes (iSCSI-RWX).
+type: application
+version: 1.0.0
+appVersion: "4.1.1"
+
+dependencies:
+  # Umbrella chart — provides the LocalPV-hostpath provisioner (openebs.io/local)
+  # used for the RWO StorageClass below. Mayastor/LVM/ZFS engines are disabled
+  # in values; we want hostpath + cStor only.
+  - name: openebs
+    version: "4.1.x"
+    repository: https://openebs.github.io/openebs
+  # cStor — the iSCSI block engine. Its CSI driver (cstor.csi.openebs.io) backs
+  # the iSCSI StorageClass and the NFS-RWX backend class.
+  - name: cstor
+    version: "3.7.x"
+    repository: https://openebs.github.io/cstor-operators
+    alias: cstor
+    condition: cstor.enabled
+  # Dynamic NFS provisioner — turns an iSCSI (cStor) RWO volume into a shared
+  # RWX export (provisioner openebs.io/nfsrwx).
+  - name: nfs-provisioner
+    version: "0.11.x"
+    repository: https://openebs.github.io/dynamic-nfs-provisioner
+    alias: nfsProvisioner
+    condition: nfsProvisioner.enabled

@@ -1,0 +1,5 @@
+apiVersion: v2
+name: monitoring-config
+description: PodMonitor for Envoy sidecars + ResourceQuota/LimitRange for the app namespace
+type: application
+version: 1.0.0

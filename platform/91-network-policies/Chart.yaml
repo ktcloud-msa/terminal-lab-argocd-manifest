@@ -1,0 +1,5 @@
+apiVersion: v2
+name: network-policies
+description: Default-deny baseline NetworkPolicies for the terminal-lab namespace
+type: application
+version: 1.0.0

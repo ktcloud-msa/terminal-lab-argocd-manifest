@@ -1,0 +1,44 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: applications
+  namespace: argocd
+spec:
+  generators:
+  - list:
+      elements:
+      # Two in-repo Helm charts, one ArgoCD Application each. Each workload runs
+      # under its own dedicated ServiceAccount (1 workload — 1 SA) and is fronted
+      # by a cert-manager-issued certificate:
+      #   web → web.external.terminal-lab.kr
+      #   api → api.external.terminal-lab.kr
+      - path: applications/charts/web
+        appname: web
+        ns: terminal-lab
+      - path: applications/charts/api
+        appname: api
+        ns: terminal-lab
+  template:
+    metadata:
+      name: '{{appname}}'
+    spec:
+      project: app
+      source:
+        repoURL: "https://github.com/kanei0415/terminal-lab-argocd-manifest.git"
+        targetRevision: HEAD
+        path: '{{path}}'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{ns}}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        managedNamespaceMetadata:
+          labels:
+            # Enable Istio sidecar (Envoy) injection for the workload namespace.
+            istio-injection: enabled
+        syncOptions:
+          - CreateNamespace=true
+          - SkipDryRunOnMissingResource=true
+          - ServerSideApply=true

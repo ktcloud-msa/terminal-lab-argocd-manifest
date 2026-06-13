@@ -1,0 +1,6 @@
+apiVersion: v2
+name: web
+description: terminal-lab web frontend (nginx SPA) — web.external.terminal-lab.kr
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

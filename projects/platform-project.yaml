@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform
+  namespace: argocd
+  # Platform layer: cluster addons / operators / observability / security
+  # rendered from platform/* by the bootstrap/platform.yaml ApplicationSet.
+  # Kept permissive but namespaced so platform vs. app workloads are separable
+  # for RBAC later.
+spec:
+  description: Cluster platform addons, operators, observability and security
+  sourceRepos:
+    - '*'
+  destinations:
+    - server: '*'
+      namespace: '*'
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'

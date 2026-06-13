@@ -1,0 +1,11 @@
+apiVersion: v2
+name: metallb
+description: MetalLB — bare-metal LoadBalancer for the on-prem OpenStack cluster
+type: application
+version: 1.0.0
+appVersion: "0.14.9"
+
+dependencies:
+  - name: metallb
+    version: "0.14.x"
+    repository: https://metallb.github.io/metallb

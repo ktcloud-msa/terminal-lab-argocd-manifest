@@ -1,0 +1,130 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: platform
+  namespace: argocd
+spec:
+  goTemplate: false
+  generators:
+  - list:
+      elements:
+      # ---------------------------------------------------------------------
+      # Wave 0: foundation — bare-metal LoadBalancer, storage CSI, mesh CRDs.
+      # Everything in later waves may depend on one of these existing.
+      # ---------------------------------------------------------------------
+      - path: platform/01-metallb
+        appname: metallb
+        ns: metallb-system
+        wave: "0"
+      - path: platform/05-openebs
+        appname: openebs
+        ns: openebs
+        wave: "0"
+      - path: platform/10-istio-base
+        appname: istio-base
+        ns: istio-system
+        wave: "0"
+
+      # ---------------------------------------------------------------------
+      # Wave 1: control planes / operators (consume wave-0 CRDs or bundle their
+      # own). MetalLB address pools need the MetalLB CRDs from wave 0.
+      # ---------------------------------------------------------------------
+      - path: platform/02-metallb-config
+        appname: metallb-config
+        ns: metallb-system
+        wave: "1"
+      - path: platform/11-istiod
+        appname: istiod
+        ns: istio-system
+        wave: "1"
+      - path: platform/30-kube-prometheus-stack
+        appname: kube-prometheus-stack
+        ns: monitoring
+        wave: "1"
+      - path: platform/40-cert-manager
+        appname: cert-manager
+        ns: cert-manager
+        wave: "1"
+      - path: platform/40-gatekeeper
+        appname: gatekeeper
+        ns: gatekeeper-system
+        wave: "1"
+      - path: platform/40-falco
+        appname: falco
+        ns: falco
+        wave: "1"
+
+      # ---------------------------------------------------------------------
+      # Wave 2: edge + responders that depend on a wave-1 control plane.
+      #   - traefik: needs a MetalLB-backed LoadBalancer IP + the ServiceMonitor
+      #              CRD from kube-prometheus-stack.
+      #   - falco-talon: needs Falco emitting events before it can respond.
+      #   - cluster-issuer: needs the cert-manager CRDs (ClusterIssuer kind).
+      #   - monitoring-config: needs the Prometheus operator CRDs.
+      # ---------------------------------------------------------------------
+      - path: platform/13-traefik
+        appname: traefik
+        ns: traefik
+        wave: "2"
+      - path: platform/40-falco-talon
+        appname: falco-talon
+        ns: falco
+        wave: "2"
+      - path: platform/41-cluster-issuer
+        appname: cluster-issuer
+        ns: cert-manager
+        wave: "2"
+      - path: platform/31-monitoring-config
+        appname: monitoring-config
+        ns: monitoring
+        wave: "2"
+
+      # ---------------------------------------------------------------------
+      # Wave 3: policies / isolation that need a live control plane
+      # (Gatekeeper CRDs registered, the app namespace present).
+      # ---------------------------------------------------------------------
+      - path: platform/91-gatekeeper-policies
+        appname: gatekeeper-policies
+        ns: gatekeeper-system
+        wave: "3"
+      - path: platform/91-network-policies
+        appname: network-policies
+        ns: terminal-lab
+        wave: "3"
+  template:
+    metadata:
+      name: '{{appname}}'
+      annotations:
+        argocd.argoproj.io/sync-wave: '{{wave}}'
+    spec:
+      project: platform
+      source:
+        repoURL: "https://github.com/kanei0415/terminal-lab-argocd-manifest.git"
+        targetRevision: HEAD
+        path: '{{path}}'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{ns}}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - SkipDryRunOnMissingResource=true
+          - ServerSideApply=true
+      # istiod re-writes failurePolicy on its own webhooks at runtime, which
+      # otherwise leaves istio-base / istiod permanently OutOfSync. The istiod
+      # Deployment also renders a PLATFORM env with value:"" that the apiserver
+      # strips on apply, producing perpetual drift.
+      ignoreDifferences:
+        - group: admissionregistration.k8s.io
+          kind: ValidatingWebhookConfiguration
+          jqPathExpressions:
+            - '.webhooks[]?.failurePolicy'
+        - group: apps
+          kind: Deployment
+          name: istiod
+          namespace: istio-system
+          jsonPointers:
+            - /spec/template/spec/containers/0/env
