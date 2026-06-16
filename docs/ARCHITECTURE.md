@@ -93,4 +93,4 @@ the secret from the same namespace as the route.
   while testing to avoid prod rate limits.
 - DNS — point `web.external.terminal-lab.kr` and `api.external.terminal-lab.kr`
   at the Traefik MetalLB VIP (required for HTTP-01 to validate).
-- All `repoURL`s assume `https://github.com/kanei0415/terminal-lab-argocd-manifest.git`.
+- All `repoURL`s assume `https://github.com/ktcloud-msa/terminal-lab-argocd-manifest.git`.

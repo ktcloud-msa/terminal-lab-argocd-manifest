@@ -99,7 +99,7 @@ spec:
     spec:
       project: platform
       source:
-        repoURL: "https://github.com/kanei0415/terminal-lab-argocd-manifest.git"
+        repoURL: "https://github.com/ktcloud-msa/terminal-lab-argocd-manifest.git"
         targetRevision: HEAD
         path: '{{path}}'
       destination:
